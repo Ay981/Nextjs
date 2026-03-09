@@ -11,6 +11,15 @@ import { formatCurrency } from './utils';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
+function isDbTimeoutError(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'ETIMEDOUT'
+  );
+}
+
 export async function fetchRevenue() {
   try {
     // Artificially delay a response for demo purposes.
@@ -46,6 +55,9 @@ export async function fetchLatestInvoices() {
     return latestInvoices;
   } catch (error) {
     console.error('Database Error:', error);
+    if (isDbTimeoutError(error)) {
+      return [];
+    }
     throw new Error('Failed to fetch the latest invoices.');
   }
 }
@@ -81,6 +93,14 @@ export async function fetchCardData() {
     };
   } catch (error) {
     console.error('Database Error:', error);
+    if (isDbTimeoutError(error)) {
+      return {
+        numberOfCustomers: 0,
+        numberOfInvoices: 0,
+        totalPaidInvoices: formatCurrency(0),
+        totalPendingInvoices: formatCurrency(0),
+      };
+    }
     throw new Error('Failed to fetch card data.');
   }
 }
