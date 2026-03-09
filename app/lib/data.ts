@@ -11,6 +11,13 @@ import { formatCurrency } from './utils';
 
 const sql = postgres(process.env.POSTGRES_URL!, { ssl: 'require' });
 
+type DataFetchError = 'timeout' | null;
+
+type DataFetchResult<T> = {
+  data: T;
+  error: DataFetchError;
+};
+
 function isDbTimeoutError(error: unknown) {
   return (
     typeof error === 'object' &&
@@ -32,9 +39,18 @@ export async function fetchRevenue() {
 
     // console.log('Data fetch completed after 3 seconds.');
 
-    return data;
+    return {
+      data,
+      error: null,
+    } as DataFetchResult<Revenue[]>;
   } catch (error) {
     console.error('Database Error:', error);
+    if (isDbTimeoutError(error)) {
+      return {
+        data: [],
+        error: 'timeout',
+      } as DataFetchResult<Revenue[]>;
+    }
     throw new Error('Failed to fetch revenue data.');
   }
 }
@@ -52,11 +68,17 @@ export async function fetchLatestInvoices() {
       ...invoice,
       amount: formatCurrency(invoice.amount),
     }));
-    return latestInvoices;
+    return {
+      data: latestInvoices,
+      error: null,
+    };
   } catch (error) {
     console.error('Database Error:', error);
     if (isDbTimeoutError(error)) {
-      return [];
+      return {
+        data: [],
+        error: 'timeout',
+      };
     }
     throw new Error('Failed to fetch the latest invoices.');
   }
@@ -86,19 +108,25 @@ export async function fetchCardData() {
     const totalPendingInvoices = formatCurrency(data[2][0].pending ?? '0');
 
     return {
-      numberOfCustomers,
-      numberOfInvoices,
-      totalPaidInvoices,
-      totalPendingInvoices,
+      data: {
+        numberOfCustomers,
+        numberOfInvoices,
+        totalPaidInvoices,
+        totalPendingInvoices,
+      },
+      error: null,
     };
   } catch (error) {
     console.error('Database Error:', error);
     if (isDbTimeoutError(error)) {
       return {
-        numberOfCustomers: 0,
-        numberOfInvoices: 0,
-        totalPaidInvoices: formatCurrency(0),
-        totalPendingInvoices: formatCurrency(0),
+        data: {
+          numberOfCustomers: 0,
+          numberOfInvoices: 0,
+          totalPaidInvoices: formatCurrency(0),
+          totalPendingInvoices: formatCurrency(0),
+        },
+        error: 'timeout',
       };
     }
     throw new Error('Failed to fetch card data.');
@@ -134,9 +162,18 @@ export async function fetchFilteredInvoices(
       LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}
     `;
 
-    return invoices;
+    return {
+      data: invoices,
+      error: null,
+    };
   } catch (error) {
     console.error('Database Error:', error);
+    if (isDbTimeoutError(error)) {
+      return {
+        data: [],
+        error: 'timeout',
+      };
+    }
     throw new Error('Failed to fetch invoices.');
   }
 }
@@ -155,9 +192,18 @@ export async function fetchInvoicesPages(query: string) {
   `;
 
     const totalPages = Math.ceil(Number(data[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    return {
+      data: totalPages,
+      error: null,
+    };
   } catch (error) {
     console.error('Database Error:', error);
+    if (isDbTimeoutError(error)) {
+      return {
+        data: 0,
+        error: 'timeout',
+      };
+    }
     throw new Error('Failed to fetch total number of invoices.');
   }
 }
@@ -180,9 +226,18 @@ export async function fetchInvoiceById(id: string) {
       amount: invoice.amount / 100,
     }));
 
-    return invoice[0];
+    return {
+      data: invoice[0],
+      error: null,
+    };
   } catch (error) {
     console.error('Database Error:', error);
+    if (isDbTimeoutError(error)) {
+      return {
+        data: undefined,
+        error: 'timeout',
+      };
+    }
     throw new Error('Failed to fetch invoice.');
   }
 }
@@ -197,9 +252,18 @@ export async function fetchCustomers() {
       ORDER BY name ASC
     `;
 
-    return customers;
+    return {
+      data: customers,
+      error: null,
+    };
   } catch (err) {
     console.error('Database Error:', err);
+    if (isDbTimeoutError(err)) {
+      return {
+        data: [],
+        error: 'timeout',
+      };
+    }
     throw new Error('Failed to fetch all customers.');
   }
 }
@@ -230,9 +294,18 @@ export async function fetchFilteredCustomers(query: string) {
       total_paid: formatCurrency(customer.total_paid),
     }));
 
-    return customers;
+    return {
+      data: customers,
+      error: null,
+    };
   } catch (err) {
     console.error('Database Error:', err);
+    if (isDbTimeoutError(err)) {
+      return {
+        data: [],
+        error: 'timeout',
+      };
+    }
     throw new Error('Failed to fetch customer table.');
   }
 }

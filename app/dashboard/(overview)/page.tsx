@@ -5,19 +5,17 @@ import { lusitana } from '@/app/ui/fonts';
 import { Suspense } from 'react';
 import { RevenueChartSkeleton,LatestInvoicesSkeleton } from '@/app/ui/skeletons';
 import {
-  
-  fetchLatestInvoices,
   fetchCardData,
 } from '@/app/lib/data';
  
 export default async function Page() {
-  const latestInvoices = await fetchLatestInvoices();
+  const { data: cardData } = await fetchCardData();
   const {
     numberOfInvoices,
     numberOfCustomers,
     totalPaidInvoices,
     totalPendingInvoices,
-  } = await fetchCardData();
+  } = cardData;
  
   return (
     <main>
